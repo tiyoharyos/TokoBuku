@@ -12,7 +12,8 @@ function ListBuku() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [reloadPage, setReloadPage] = useState(false);
   const [deleteBukuId, setDeleteBukuId] = useState(null);
-  const [updateBukuId, setUpdateBukuId] = useState(null);
+  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
+  const [deletedBukuId, setDeletedBukuId] = useState(null);
   const [namaBuku, setNamaBuku] = useState("");
   const [kategiruBuku, setKategiruBuku] = useState("");
   const [penerbitBuku, setPenerbitBuku] = useState("");
@@ -33,6 +34,9 @@ function ListBuku() {
   const handleShowKonfirmasiModal = () => setShowKonfirmasiModal(true);
   const handleCloseUpdateModal = () => setShowUpdateModal(false);
   const handleShowUpdateModal = () => setShowUpdateModal(true);
+  const handleShowDeleteSuccessModal = () => setShowDeleteSuccessModal(true);
+  const handleCloseDeleteSuccessModal = () => setShowDeleteSuccessModal(false);
+
 
   const handleReloadPage = () => {
     setReloadPage(true);
@@ -69,12 +73,14 @@ function ListBuku() {
     try {
       await axios.delete(`http://localhost:5000/buku/${deleteBukuId}`);
       setShowKonfirmasiModal(false);
-      setShowSuccessModal(true);
+      handleShowDeleteSuccessModal();
+      setDeletedBukuId(deleteBukuId); // Simpan id buku yang dihapus
       handleReloadPage();
     } catch (error) {
       console.log(error);
     }
   };
+  
 
   const loadImage = (e) => {
     const image = e.target.files[0];
@@ -276,6 +282,22 @@ function ListBuku() {
           </Button>
         </Modal.Footer>
       </Modal>
+      {/* Modal Pesan Jika Hapus Data Berhasil*/}
+      <Modal show={showDeleteSuccessModal} onHide={handleCloseDeleteSuccessModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Konfirmasi Hapus</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>Data Berhasil di Hapus</Modal.Body>
+        <Modal.Footer>
+          <button
+            className="button is-success"
+            onClick={handleCloseDeleteSuccessModal}
+          >
+            OK
+          </button>
+        </Modal.Footer>
+      </Modal>
+
 
       {/* Modal Edit Data */}
       <Modal show={showUpdateModal} onHide={handleCloseUpdateModal}>
@@ -371,6 +393,7 @@ function ListBuku() {
           </form>
         </Modal.Body>
       </Modal>
+      
     </Container>
   );
 }
