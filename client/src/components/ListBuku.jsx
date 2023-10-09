@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Modal, Button, Container, Form, ButtonGroup, Card, Col, Row, Image } from 'react-bootstrap';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import {
+  Modal,
+  Button,
+  Container,
+  Form,
+  ButtonGroup,
+  Card,
+  Col,
+  Row,
+  Image,
+} from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.min.css";
 
 function ListBuku() {
   const [buku, setBuku] = useState([]);
@@ -14,6 +24,7 @@ function ListBuku() {
   const [deleteBukuId, setDeleteBukuId] = useState(null);
   const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
   const [deletedBukuId, setDeletedBukuId] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
   const [namaBuku, setNamaBuku] = useState("");
   const [kategiruBuku, setKategiruBuku] = useState("");
   const [penerbitBuku, setPenerbitBuku] = useState("");
@@ -25,6 +36,8 @@ function ListBuku() {
   });
   const [file, setFile] = useState("");
   const [preview, setPreview] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
   const navigate = useNavigate();
 
   const handleClose = () => setShowTambahModal(false);
@@ -35,17 +48,27 @@ function ListBuku() {
   const handleCloseUpdateModal = () => setShowUpdateModal(false);
   const handleShowUpdateModal = () => setShowUpdateModal(true);
   const handleShowDeleteSuccessModal = () => setShowDeleteSuccessModal(true);
-  const handleCloseDeleteSuccessModal = () => setShowDeleteSuccessModal(false);
-
+  const handleCloseDeleteSuccessModal = () =>
+    setShowDeleteSuccessModal(false);
 
   const handleReloadPage = () => {
     setReloadPage(true);
   };
+  // Ditempatkan di bawah definisi state dan sebelum useEffect
+const [penerbitOptions, setPenerbitOptions] = useState([]);
 
-  useEffect(() => {
-    getBuku();
-    setReloadPage(false);
-  }, [reloadPage]);
+const getPenerbitOptions = async () => {
+  try {
+    const response = await axios.get("http://localhost:5000/penerbit");
+    setPenerbitOptions(response.data);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+useEffect(() => {
+  getPenerbitOptions();
+}, []);
 
   const getBuku = async () => {
     const response = await axios.get("http://localhost:5000/buku");
@@ -68,19 +91,19 @@ function ListBuku() {
     });
     handleShowUpdateModal();
   };
+  
 
   const deleteBuku = async () => {
     try {
       await axios.delete(`http://localhost:5000/buku/${deleteBukuId}`);
       setShowKonfirmasiModal(false);
       handleShowDeleteSuccessModal();
-      setDeletedBukuId(deleteBukuId); // Simpan id buku yang dihapus
+      setDeletedBukuId(deleteBukuId);
       handleReloadPage();
     } catch (error) {
       console.log(error);
     }
   };
-  
 
   const loadImage = (e) => {
     const image = e.target.files[0];
@@ -95,16 +118,17 @@ function ListBuku() {
     formData.append("namaBuku", namaBuku);
     formData.append("kategiruBuku", kategiruBuku);
     formData.append("penerbitBuku", penerbitBuku);
-  
+
     try {
       await axios.post("http://localhost:5000/buku", formData, {
         headers: {
           "Content-type": "multipart/form-data",
         },
       });
-  
+
       handleClose();
       setShowSuccessModal(true);
+      setSuccessMessage("Data telah berhasil dimasukkan.");
       setReloadPage(true);
     } catch (error) {
       console.log(error);
@@ -118,6 +142,7 @@ function ListBuku() {
     formData.append("namaBuku", updateBukuData.namaBuku);
     formData.append("kategiruBuku", updateBukuData.kategiruBuku);
     formData.append("penerbitBuku", updateBukuData.penerbitBuku);
+  
     try {
       await axios.patch(
         `http://localhost:5000/buku/${updateBukuData.id}`,
@@ -129,47 +154,108 @@ function ListBuku() {
         }
       );
       setShowUpdateModal(false);
+      setSuccessMessage("Data telah berhasil Dirubah.");
       setShowSuccessModal(true);
       handleReloadPage();
     } catch (error) {
       console.log(error);
     }
   };
+  
+  const searchBuku = () => {
+    const results = buku.filter((dataBuku) => {
+      return (
+        dataBuku.namaBuku.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        dataBuku.kategiruBuku.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        dataBuku.penerbitBuku.toLowerCase().includes(searchKeyword.toLowerCase())
+      );
+    });
+    setSearchResults(results);
+  };
+
+  useEffect(() => {
+    getBuku();
+    setReloadPage(false);
+    searchBuku();
+  }, [reloadPage, searchKeyword, buku]);
 
   return (
     <Container>
       <Button variant="primary" onClick={handleShow}>
         Tambah Data
       </Button>
+      <input
+        type="text"
+        placeholder="Cari buku..."
+        value={searchKeyword}
+        onChange={(e) => setSearchKeyword(e.target.value)}
+      />
       <Row>
-        {buku.map((dataBuku) => {
-          return(
-            <Col md={4} >
+        {searchResults.length > 0 ? (
+          searchResults.map((dataBuku) => (
+            <Col md={4} key={dataBuku.id}>
               <Card>
-                <Image src={dataBuku.url} alt="image"/>
-                  <div>
-                    <Card.Title className="text-center">{dataBuku.namaBuku}</Card.Title>
-                      <Card.Text className="text-left">
-                        {dataBuku.kategiruBuku}
-                      </Card.Text>
-                      <Card.Text className="text-left">
-                        {dataBuku.penerbitBuku}
-                      </Card.Text>
-                  </div>
-                  <Card.Footer className="text-muted">
-                    <ButtonGroup size="sm">
-                      <Button onClick={() => prepareUpdateBuku(dataBuku.id)}>
-                          Edit Data
-                      </Button>
-                      <Button onClick={() => prepareDeleteBuku(dataBuku.id)} variant="danger" >
-                          Hapus
-                      </Button>
-                    </ButtonGroup>
-                  </Card.Footer>
+                <Image src={dataBuku.url} alt="image" />
+                <div>
+                  <Card.Title className="text-center">
+                    {dataBuku.namaBuku}
+                  </Card.Title>
+                  <Card.Text className="text-left">
+                    {dataBuku.kategiruBuku}
+                  </Card.Text>
+                  <Card.Text className="text-left">
+                    {dataBuku.penerbitBuku}
+                  </Card.Text>
+                </div>
+                <Card.Footer className="text-muted">
+                  <ButtonGroup size="sm">
+                    <Button onClick={() => prepareUpdateBuku(dataBuku.id)}>
+                      Edit Data
+                    </Button>
+                    <Button
+                      onClick={() => prepareDeleteBuku(dataBuku.id)}
+                      variant="danger"
+                    >
+                      Hapus
+                    </Button>
+                  </ButtonGroup>
+                </Card.Footer>
               </Card>
             </Col>
-        )
-        })}
+          ))
+        ) : (
+          buku.map((dataBuku) => (
+            <Col md={4} key={dataBuku.id}>
+              <Card>
+                <Image src={dataBuku.url} alt="image" />
+                <div>
+                  <Card.Title className="text-center">
+                    {dataBuku.namaBuku}
+                  </Card.Title>
+                  <Card.Text className="text-left">
+                    {dataBuku.kategiruBuku}
+                  </Card.Text>
+                  <Card.Text className="text-left">
+                    {dataBuku.penerbitBuku}
+                  </Card.Text>
+                </div>
+                <Card.Footer className="text-muted">
+                  <ButtonGroup size="sm">
+                    <Button onClick={() => prepareUpdateBuku(dataBuku.id)}>
+                      Edit Data
+                    </Button>
+                    <Button
+                      onClick={() => prepareDeleteBuku(dataBuku.id)}
+                      variant="danger"
+                    >
+                      Hapus
+                    </Button>
+                  </ButtonGroup>
+                </Card.Footer>
+              </Card>
+            </Col>
+          ))
+        )}
       </Row>
       {/* Modal Tambah Data */}
       <Modal show={showTambahModal} onHide={handleClose}>
@@ -202,7 +288,7 @@ function ListBuku() {
                 <option value="Novel">Novel</option>
               </Form.Select>
             </Form.Group>
-            <div className="field">
+            {/* <div className="field">
               <label className="label">Penerbit Buku</label>
               <div className="control">
                 <input
@@ -213,7 +299,23 @@ function ListBuku() {
                   placeholder="Penerbit Buku"
                 />
               </div>
-            </div>
+
+            </div> */}
+<Form.Group className="mb-3" controlId="formGroupPenerbit">
+  <Form.Label>Penerbit Buku</Form.Label>
+  <Form.Select
+    aria-label="Default select example"
+    value={penerbitBuku}
+    onChange={(e) => setPenerbitBuku(e.target.value)}
+  >
+    <option>Pilih Penerbit Buku</option>
+    {penerbitOptions.map((penerbit) => (
+      <option key={penerbit.id} value={penerbit.PenerbitBuku}>
+        {penerbit.PenerbitBuku} {/* Sesuaikan dengan nama kolom yang sesuai */}
+      </option>
+    ))}
+  </Form.Select>
+</Form.Group>
             <div className="field">
               <label className="label">Image</label>
               <div className="control">
@@ -256,7 +358,7 @@ function ListBuku() {
         <Modal.Header closeButton>
           <Modal.Title>Sukses</Modal.Title>
         </Modal.Header>
-        <Modal.Body>Data telah dimasukkan!</Modal.Body>
+        <Modal.Body>{successMessage}</Modal.Body>
         <Modal.Footer>
           <button
             className="button is-success"
@@ -323,40 +425,44 @@ function ListBuku() {
                 />
               </div>
             </div>
-            <div className="field">
-              <label className="label">Kategori Buku</label>
-              <div className="control">
-                <input
-                  type="text"
-                  className="input"
-                  value={updateBukuData.kategiruBuku}
-                  onChange={(e) =>
-                    setUpdateBukuData({
-                      ...updateBukuData,
-                      kategiruBuku: e.target.value,
-                    })
-                  }
-                  placeholder="Kategori Buku"
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label className="label">Penerbit Buku</label>
-              <div className="control">
-                <input
-                  type="text"
-                  className="input"
-                  value={updateBukuData.penerbitBuku}
-                  onChange={(e) =>
-                    setUpdateBukuData({
-                      ...updateBukuData,
-                      penerbitBuku: e.target.value,
-                    })
-                  }
-                  placeholder="Penerbit Buku"
-                />
-              </div>
-            </div>
+            <Form.Group>
+            <Form.Label>Kategori Buku</Form.Label>
+              <Form.Select
+                aria-label="Default select example"
+                value={kategiruBuku}
+                onChange={(e) =>
+                  setUpdateBukuData({
+                    ...updateBukuData,
+                    kategiruBuku: e.target.value,
+                  })
+                }
+              ><option>Pilih Satu Jenis Kategori Buku</option>
+                <option value="Keilmuan">Keilmuan</option>
+                <option value="Bisnis">Bisnis</option>
+                <option value="Novel">Novel</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="formGroupPenerbit">
+  <Form.Label>Penerbit Buku</Form.Label>
+  <Form.Select
+    aria-label="Default select example"
+    value={updateBukuData.penerbitBuku}
+    onChange={(e) =>
+      setUpdateBukuData({
+        ...updateBukuData,
+        penerbitBuku: e.target.value,
+      })
+    }
+  >
+    <option>Pilih Penerbit Buku</option>
+    {penerbitOptions.map((penerbit) => (
+      <option key={penerbit.id} value={penerbit.PenerbitBuku}>
+        {penerbit.PenerbitBuku}
+      </option>
+    ))}
+  </Form.Select>
+</Form.Group>
+
             <div className="field">
               <label className="label">Image</label>
               <div className="control">
