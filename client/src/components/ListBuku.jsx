@@ -11,7 +11,7 @@ import {
   Row,
   Image,
 } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
+
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function ListBuku() {
@@ -38,7 +38,7 @@ function ListBuku() {
   const [preview, setPreview] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const navigate = useNavigate();
+
 
   const handleClose = () => setShowTambahModal(false);
   const handleShow = () => setShowTambahModal(true);
